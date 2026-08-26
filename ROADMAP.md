@@ -30,6 +30,7 @@ A Playwright + Reqnroll + NUnit BDD framework in C# for **API** test automation,
 - [x] `AuthService` — login, capture JWT + refresh token
 - [x] `ProductsService` — CRUD wrapper methods
 - [x] Request/response models (POCOs) for auth + products
+- [x] Post-Phase 2 hardening: `BaseApiTest` shared base class (Template Method pattern) and a configuration-driven settings layer (`appsettings.json` + `ConfigLoader`) — no hardcoded URLs or credentials remain in any test class
 
 ### Phase 3 — Auth & Token Expiry
 
@@ -68,7 +69,7 @@ A running reference of the underlying concepts this framework is built to demons
 1. **HTTP fundamentals** — Methods and idempotency, status code categories, headers (`Content-Type`, `Authorization`). The foundation everything else in this project sits on.
 2. **Playwright's `APIRequestContext` model** — Context creation (`NewContextAsync`), `BaseURL`, default headers, and the response shape (`IAPIResponse`). Shares cookies and storage state the same way a browser context does, which is why it pairs naturally with a Playwright-based UI framework. *(Phase 1)*
 3. **Authentication & token lifecycle** — Login and token capture via `AuthService`; expiry handling still ahead. *(Phase 2 done, Phase 3 in progress)*
-4. **Framework architecture — separation of concerns** — Thin HTTP client wrapper (`ApiClient`) → service/endpoint classes (`AuthService`, `ProductsService`) → test layer, so each concern has exactly one place to change. *(Phase 2 done, Phase 4 pending)*
+4. **Framework architecture — separation of concerns** — Thin HTTP client wrapper (`ApiClient`) → service/endpoint classes (`AuthService`, `ProductsService`) → test layer, so each concern has exactly one place to change. Extended with `BaseApiTest`, a shared abstract base class (Template Method pattern) that owns connection setup/teardown for every test class, and a configuration layer (`appsettings.json` + `ConfigLoader`) so base URLs and credentials are never hardcoded. *(Phase 2 done, Phase 4 pending)*
 5. **BDD & Gherkin — when it earns its place** — Scenario Outlines for data-driven coverage; step definitions call into services rather than raw HTTP, so BDD adds clarity instead of ceremony. *(Phase 4)*
 6. **Reqnroll mechanics** — Attribute-based step binding, `[BeforeScenario]`/`[AfterScenario]` hooks, and dependency injection sharing objects (like `ApiClient`) across step classes within a scenario. *(Phase 4)*
 7. **Test execution model — isolation & parallelism** — No shared mutable state, correct `SetUp`/`TearDown` scoping. Currently proven with 7 independent tests (`SmokeTests`, `AuthTests`, `ProductsTests`) all passing; parallel execution itself lands in Phase 5. *(Phase 2 groundwork done, Phase 5 pending)*

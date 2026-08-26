@@ -20,18 +20,23 @@ An API test automation framework built with **Playwright**, **Reqnroll**, and **
 api-playwright-csharp/
 ├── ApiTests/
 │   ├── Core/
-│   │   └── ApiClient.cs            # Wraps Playwright's APIRequestContext — the only file that touches Playwright directly
+│   │   ├── ApiClient.cs            # Wraps Playwright's APIRequestContext — the only file that touches Playwright directly
+│   │   ├── ApiSettings.cs          # Typed shape of appsettings.json
+│   │   └── ConfigLoader.cs         # Reads and deserializes appsettings.json into ApiSettings
 │   ├── Models/
 │   │   ├── AuthModels.cs           # LoginRequest / LoginResponse POCOs
 │   │   └── ProductModels.cs        # Product, ProductListResponse, and CRUD request/response POCOs
 │   ├── Services/
 │   │   ├── AuthService.cs          # Login logic, built on ApiClient
 │   │   └── ProductsService.cs      # CRUD methods, built on ApiClient
-│   ├── SmokeTests.cs               # Connectivity check — one GET, one assertion
-│   ├── AuthTests.cs                # Verifies login against real DummyJSON credentials
-│   ├── ProductsTests.cs            # Verifies all five ProductsService methods
+│   ├── Tests/
+│   │   ├── BaseApiTest.cs          # Shared connection setup/teardown — every test class inherits from this
+│   │   ├── SmokeTests.cs           # Connectivity check — one GET, one assertion
+│   │   ├── AuthTests.cs            # Verifies login against real DummyJSON credentials
+│   │   └── ProductsTests.cs        # Verifies all five ProductsService methods
+│   ├── appsettings.json            # Base URLs and credentials — no hardcoded values anywhere in test code
 │   └── ApiTests.csproj
-├── ApiPlaywrightCSharp.slnx        # Solution file (.slnx — .NET 10's new default format)
+├── ApiPlaywrightCSharp.sln         # Solution file
 ├── ROADMAP.md                      # Phase-by-phase build plan and current progress
 └── README.md
 ```
@@ -49,6 +54,10 @@ Test  →  Service  →  ApiClient  →  Playwright  →  DummyJSON
 - **`ApiClient`** is the only class that knows Playwright exists. It owns creating and disposing the driver and the request context.
 
 This is also why every test is independent: each one creates and disposes its own `ApiClient` in `[SetUp]`/`[TearDown]`, so no test can leave behind state that affects another — the property that will make parallel execution (Phase 5) safe to enable later.
+
+Every test class also inherits from **`BaseApiTest`**, an abstract base class that owns the one thing every test class needs regardless of which API it targets: creating and disposing the `ApiClient` connection. Each derived class supplies only its own `BaseUrl` — a compulsory, compiler-enforced override — and whatever service objects it specifically needs. This is the Template Method design pattern: the base class defines the fixed skeleton, derived classes fill in the one piece that varies.
+
+Base URLs and credentials are no longer hardcoded anywhere either — they're loaded once from `appsettings.json` via `ConfigLoader`, and shared across every test class through a single field on `BaseApiTest`.
 
 ## Prerequisites
 
@@ -82,6 +91,8 @@ Currently runs 7 tests — connectivity, authentication, and full product CRUD �
 - **Full CRUD coverage** against a real REST API, including correctly modeling the API's non-obvious response shapes — the product list endpoint returns a wrapper object with pagination metadata rather than a bare array, and the delete endpoint returns a different shape than a normal read
 - **Test isolation** — every test creates and disposes its own `ApiClient`, so no test depends on or affects another's state
 - **Async-safe initialization** — an `InitializeAsync`/`DisposeAsync` pattern used throughout, since C# constructors can't be `async`
+- **A shared base test class (Template Method pattern)** — `BaseApiTest` owns connection setup/teardown for every test class; each derived class only supplies its own base URL and whatever services it needs
+- **Configuration-driven settings** — base URLs and credentials loaded from `appsettings.json` at runtime, not hardcoded into test or service code
 
 ## Tests Covered
 
@@ -97,7 +108,7 @@ Currently runs 7 tests — connectivity, authentication, and full product CRUD �
 
 ## Current Status & Roadmap
 
-Phases 1 and 2 are complete: the project is scaffolded, and the full programmatic core — `ApiClient`, both services, and every model — is built and verified against live API responses. Still ahead: token-expiry testing (Phase 3), the Reqnroll BDD layer on top of the existing services (Phase 4), parallel execution (Phase 5), CI/CD (Phase 6), and an optional WireMock.NET stretch goal (Phase 7).
+Phases 1 and 2 are complete: the project is scaffolded, and the full programmatic core — `ApiClient`, both services, and every model — is built and verified against live API responses. Since then, the framework has also been hardened with a shared `BaseApiTest` base class and a configuration-driven settings layer, both covered in the Architecture section above. The settings file is already structured to support a second API (JSONPlaceholder) alongside DummyJSON. Still ahead: token-expiry testing (Phase 3), the Reqnroll BDD layer on top of the existing services (Phase 4), parallel execution (Phase 5), CI/CD (Phase 6), and an optional WireMock.NET stretch goal (Phase 7).
 
 See [ROADMAP.md](./ROADMAP.md) for the full phase-by-phase plan and progress.
 
