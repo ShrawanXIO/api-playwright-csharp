@@ -1,8 +1,8 @@
 using System.Text.Json;
 using ApiTests.Core;
-using ApiTests.Models;
+using ApiTests.Models.DummyJson;
 
-namespace ApiTests.Services;
+namespace ApiTests.Services.DummyJson;
 public class AuthService
 {
     private readonly ApiClient _apiClient;

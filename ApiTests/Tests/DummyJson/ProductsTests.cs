@@ -1,9 +1,9 @@
 using ApiTests.Core;
-using ApiTests.Models;
-using ApiTests.Services;
+using ApiTests.Models.DummyJson;
+using ApiTests.Services.DummyJson;
 using NUnit.Framework;
 
-namespace ApiTests.Tests;
+namespace ApiTests.Tests.DummyJson;
 
 public class ProductsTests : BaseApiTest
 {

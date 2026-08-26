@@ -1,7 +1,7 @@
 using ApiTests.Core;
 using NUnit.Framework;
 
-namespace ApiTests.Tests;
+namespace ApiTests.Tests.DummyJson;
 
 public class SmokeTests : BaseApiTest
 {
