@@ -2,7 +2,7 @@ using System.Text.Json;
 using ApiTests.Core;
 using ApiTests.JsonPlaceholder.Models;
 
-namespace ApiTests.Services.JsonPlaceholder;
+namespace ApiTests.JsonPlaceholder.Services;
 
 public class PostsService
 {

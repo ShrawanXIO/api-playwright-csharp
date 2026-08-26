@@ -1,9 +1,9 @@
-using ApiTests.Models.JsonPlaceholder;
-using ApiTests.Services.JsonPlaceholder;
-using ApiTests.Tests;
+using ApiTests.JsonPlaceholder.Models;
+using ApiTests.JsonPlaceholder.Services;
+using ApiTests.Core;
 using NUnit.Framework;
 
-namespace ApiTests.Tests.JsonPlaceholder;
+namespace ApiTests.JsonPlaceholder.Tests;
 
 public class PostsTests : BaseApiTest
 {

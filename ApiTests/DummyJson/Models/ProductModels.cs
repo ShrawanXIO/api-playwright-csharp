@@ -1,4 +1,4 @@
-namespace ApiTests.Models.DummyJson;
+namespace ApiTests.DummyJson.Models;
 
 public class Product
 {

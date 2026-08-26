@@ -1,4 +1,4 @@
-namespace ApiTests.Models.JsonPlaceholder;
+namespace ApiTests.JsonPlaceholder.Models;
 
 public class Post
 {

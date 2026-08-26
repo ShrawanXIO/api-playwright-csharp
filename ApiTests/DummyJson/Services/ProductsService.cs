@@ -1,8 +1,8 @@
 using System.Text.Json;
 using ApiTests.Core;
-using ApiTests.Models.DummyJson;
+using ApiTests.DummyJson.Models;
 
-namespace ApiTests.Services.DummyJson;
+namespace ApiTests.DummyJson.Services;
 
 public class ProductsService
 {
