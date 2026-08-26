@@ -5,6 +5,7 @@ namespace ApiTests.Tests;
 
 public abstract class BaseApiTest
 {
+    protected static readonly ApiSettings Settings = ConfigLoader.Load();
    protected ApiClient apiClient {get; private set;} = null!;
 
    protected abstract string BaseUrl { get; }

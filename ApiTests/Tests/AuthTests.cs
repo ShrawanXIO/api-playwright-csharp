@@ -9,7 +9,7 @@ public class AuthTests : BaseApiTest
 {
     private AuthService _authService = null!;
 
-    protected override string BaseUrl => "https://dummyjson.com";
+    protected override string BaseUrl => Settings.DummyJsonBaseUrl;
 
     [SetUp]
     public async Task SetupService()
@@ -22,8 +22,8 @@ public class AuthTests : BaseApiTest
     {
         var request = new LoginRequest
         {
-            Username = "emilys",
-            Password = "emilyspass",
+            Username = Settings.DummyJsonUsername,
+            Password = Settings.DummyJsonPassword,
             ExpiresInMins = 30
         };
 

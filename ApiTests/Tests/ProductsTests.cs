@@ -10,7 +10,7 @@ public class ProductsTests : BaseApiTest
   
     private ProductsService _productsService = null!;
 
-    protected override string BaseUrl => "https://dummyjson.com";
+    protected override string BaseUrl => Settings.DummyJsonBaseUrl;
 
     [SetUp]
     public async Task SetupService()

@@ -5,7 +5,7 @@ namespace ApiTests.Tests;
 
 public class SmokeTests : BaseApiTest
 {
-    protected override string BaseUrl => "https://dummyjson.com";
+    protected override string BaseUrl => Settings.DummyJsonBaseUrl;
 
     [Test]
     public async Task GetProducts_ReturnsOk()
