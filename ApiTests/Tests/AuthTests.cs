@@ -3,19 +3,18 @@ using ApiTests.Models;
 using ApiTests.Services;
 using NUnit.Framework;
 
-namespace ApiTests;
+namespace ApiTests.Tests;
 
-public class AuthTests
+public class AuthTests : BaseApiTest
 {
-    private ApiClient _apiClient = null!;
     private AuthService _authService = null!;
 
+    protected override string BaseUrl => "https://dummyjson.com";
+
     [SetUp]
-    public async Task Setup()
+    public async Task SetupService()
     {
-        _apiClient = new ApiClient();
-        await _apiClient.InitializeAsync("https://dummyjson.com");
-        _authService = new AuthService(_apiClient);
+        _authService = new AuthService(apiClient);
     }
 
     [Test]
@@ -38,9 +37,4 @@ public class AuthTests
         });
     }
 
-    [TearDown]
-    public async Task TearDown()
-    {
-        await _apiClient.DisposeAsync();
-    }
 }

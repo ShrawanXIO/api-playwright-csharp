@@ -3,19 +3,19 @@ using ApiTests.Models;
 using ApiTests.Services;
 using NUnit.Framework;
 
-namespace ApiTests;
+namespace ApiTests.Tests;
 
-public class ProductsTests
+public class ProductsTests : BaseApiTest
 {
-    private ApiClient _apiClient = null!;
+  
     private ProductsService _productsService = null!;
 
+    protected override string BaseUrl => "https://dummyjson.com";
+
     [SetUp]
-    public async Task Setup()
+    public async Task SetupService()
     {
-        _apiClient = new ApiClient();
-        await _apiClient.InitializeAsync("https://dummyjson.com");
-        _productsService = new ProductsService(_apiClient);
+        _productsService = new ProductsService(apiClient);
     }
 
     [Test]
@@ -77,10 +77,5 @@ public class ProductsTests
             Assert.That(result.IsDeleted, Is.True);
         });
     }
-
-    [TearDown]
-    public async Task TearDown()
-    {
-        await _apiClient.DisposeAsync();
-    }
+   
 }
