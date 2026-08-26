@@ -3,29 +3,22 @@ using ApiTests.Core;
 using ApiTests.DummyJson.Models;
 
 namespace ApiTests.DummyJson.Services;
-public class AuthService
+
+public class AuthService : BaseService
 {
-    private readonly ApiClient _apiClient;
 
-    private static readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions
+    public AuthService(ApiClient apiClient) : base(apiClient)
     {
-        PropertyNameCaseInsensitive = true
-    };
-
-    public AuthService(ApiClient apiClient)
-    {
-        _apiClient = apiClient;
     }
-
     public async Task<LoginResponse> LoginAsync(LoginRequest request)
     {
-        var response = await _apiClient.Context.PostAsync("/auth/login", new()
+        var response = await ApiClient.Context.PostAsync("/auth/login", new()
         {
             DataObject = request
         });
 
         var body = await response.TextAsync();
-        return JsonSerializer.Deserialize<LoginResponse>(body, _jsonOptions)!;
+        return JsonSerializer.Deserialize<LoginResponse>(body, JsonOptions)!;
     }
 
 }
