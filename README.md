@@ -16,30 +16,32 @@ An API test automation framework built with **Playwright**, **Reqnroll**, and **
 
 ## Project Structure
 
+The project is organized as **vertical slices** — each API gets its own self-contained folder holding everything specific to it (models, services, tests), rather than grouping all models together, all services together, and all tests together across every API. Only genuinely shared infrastructure — code that doesn't vary by which API is being tested — lives in `Core/`.
+
 ```text
 api-playwright-csharp/
 ├── ApiTests/
 │   ├── Core/
 │   │   ├── ApiClient.cs            # Wraps Playwright's APIRequestContext — the only file that touches Playwright directly
 │   │   ├── ApiSettings.cs          # Typed shape of appsettings.json
-│   │   └── ConfigLoader.cs         # Reads and deserializes appsettings.json into ApiSettings
-│   ├── Models/
-│   │   ├── AuthModels.cs           # LoginRequest / LoginResponse POCOs
-│   │   └── ProductModels.cs        # Product, ProductListResponse, and CRUD request/response POCOs
-│   ├── Services/
-│   │   ├── AuthService.cs          # Login logic, built on ApiClient
-│   │   └── ProductsService.cs      # CRUD methods, built on ApiClient
-│   ├── Tests/
-│   │   ├── BaseApiTest.cs          # Shared connection setup/teardown — every test class inherits from this
-│   │   ├── SmokeTests.cs           # Connectivity check — one GET, one assertion
-│   │   ├── AuthTests.cs            # Verifies login against real DummyJSON credentials
-│   │   └── ProductsTests.cs        # Verifies all five ProductsService methods
-│   ├── appsettings.json            # Base URLs and credentials — no hardcoded values anywhere in test code
+│   │   ├── ConfigLoader.cs         # Reads and deserializes appsettings.json into ApiSettings
+│   │   └── BaseApiTest.cs          # Shared connection setup/teardown — every API's test classes inherit from this
+│   ├── DummyJson/
+│   │   ├── Models/                 # AuthModels.cs, ProductModels.cs
+│   │   ├── Services/                # AuthService.cs, ProductsService.cs
+│   │   └── Tests/                   # SmokeTests.cs, AuthTests.cs, ProductsTests.cs
+│   ├── JsonPlaceholder/
+│   │   ├── Models/                 # PostModels.cs
+│   │   ├── Services/                # PostsService.cs
+│   │   └── Tests/                   # PostsTests.cs
+│   ├── appsettings.json            # Base URLs and credentials for every API — no hardcoded values anywhere in test code
 │   └── ApiTests.csproj
 ├── ApiPlaywrightCSharp.sln         # Solution file
 ├── ROADMAP.md                      # Phase-by-phase build plan and current progress
 └── README.md
 ```
+
+Adding a third API means adding a third self-contained folder alongside `DummyJson/` and `JsonPlaceholder/` — nothing in `Core/` needs to change to support it.
 
 ## Architecture
 
@@ -79,7 +81,7 @@ dotnet restore
 dotnet test
 ```
 
-Currently runs 7 tests — connectivity, authentication, and full product CRUD — all executing against the live DummyJSON API, not mocks or stubs.
+Currently runs 9 tests across two independent APIs — DummyJSON (connectivity, authentication, full product CRUD) and JSONPlaceholder (no authentication) — all executing against live APIs, not mocks or stubs.
 
 ## What This Project Demonstrates
 
@@ -93,22 +95,26 @@ Currently runs 7 tests — connectivity, authentication, and full product CRUD �
 - **Async-safe initialization** — an `InitializeAsync`/`DisposeAsync` pattern used throughout, since C# constructors can't be `async`
 - **A shared base test class (Template Method pattern)** — `BaseApiTest` owns connection setup/teardown for every test class; each derived class only supplies its own base URL and whatever services it needs
 - **Configuration-driven settings** — base URLs and credentials loaded from `appsettings.json` at runtime, not hardcoded into test or service code
+- **Multi-API support, proven not just planned** — a second, unrelated API (JSONPlaceholder, no authentication at all) was added with zero changes to `Core/` or `BaseApiTest`, confirming the shared infrastructure genuinely is API-agnostic
+- **Vertical-slice project organization** — each API is self-contained (its own models, services, and tests together), rather than every API's code scattered across shared layer folders
 
 ## Tests Covered
 
-| File | Test | What it verifies |
-| --- | --- | --- |
-| SmokeTests.cs | `GetProducts_ReturnsOk` | Basic connectivity — a GET call to DummyJSON returns a 200 |
-| AuthTests.cs | `Login_WithValidCredentials_ReturnsAccessToken` | Login returns a valid JWT access token and refresh token |
-| ProductsTests.cs | `GetAllProducts_ReturnsProducts` | Product list endpoint returns data with correct pagination metadata |
-| ProductsTests.cs | `GetProductById_ReturnsCorrectProduct` | Single-product GET returns the requested product |
-| ProductsTests.cs | `CreateProduct_ReturnsNewProductWithId` | POST to `/products/add` returns a new product with a generated ID |
-| ProductsTests.cs | `UpdateProduct_ReturnsUpdatedTitle` | PUT to `/products/{id}` returns the updated field values |
-| ProductsTests.cs | `DeleteProduct_ReturnsIsDeletedTrue` | DELETE returns the `isDeleted` flag and a deletion timestamp |
+| API | File | Test | What it verifies |
+| --- | --- | --- | --- |
+| DummyJson | SmokeTests.cs | `GetProducts_ReturnsOk` | Basic connectivity — a GET call to DummyJSON returns a 200 |
+| DummyJson | AuthTests.cs | `Login_WithValidCredentials_ReturnsAccessToken` | Login returns a valid JWT access token and refresh token |
+| DummyJson | ProductsTests.cs | `GetAllProducts_ReturnsProducts` | Product list endpoint returns data with correct pagination metadata |
+| DummyJson | ProductsTests.cs | `GetProductById_ReturnsCorrectProduct` | Single-product GET returns the requested product |
+| DummyJson | ProductsTests.cs | `CreateProduct_ReturnsNewProductWithId` | POST to `/products/add` returns a new product with a generated ID |
+| DummyJson | ProductsTests.cs | `UpdateProduct_ReturnsUpdatedTitle` | PUT to `/products/{id}` returns the updated field values |
+| DummyJson | ProductsTests.cs | `DeleteProduct_ReturnsIsDeletedTrue` | DELETE returns the `isDeleted` flag and a deletion timestamp |
+| JsonPlaceholder | PostsTests.cs | `GetAllPosts_ReturnsPosts` | Post list endpoint (no authentication) returns data |
+| JsonPlaceholder | PostsTests.cs | `GetPostById_ReturnsCorrectPost` | Single-post GET returns the requested post |
 
 ## Current Status & Roadmap
 
-Phases 1 and 2 are complete: the project is scaffolded, and the full programmatic core — `ApiClient`, both services, and every model — is built and verified against live API responses. Since then, the framework has also been hardened with a shared `BaseApiTest` base class and a configuration-driven settings layer, both covered in the Architecture section above. The settings file is already structured to support a second API (JSONPlaceholder) alongside DummyJSON. Still ahead: token-expiry testing (Phase 3), the Reqnroll BDD layer on top of the existing services (Phase 4), parallel execution (Phase 5), CI/CD (Phase 6), and an optional WireMock.NET stretch goal (Phase 7).
+Phases 1 and 2 are complete: the project is scaffolded, and the full programmatic core — `ApiClient`, both services, and every model — is built and verified against live API responses. Since then, the framework has also been hardened with a shared `BaseApiTest` base class and a configuration-driven settings layer, and extended to a second, independent API (JSONPlaceholder) organized as a vertical slice alongside DummyJSON — all covered in the Architecture and Project Structure sections above. Still ahead: token-expiry testing (Phase 3), the Reqnroll BDD layer on top of the existing services (Phase 4), parallel execution (Phase 5), CI/CD (Phase 6), and an optional WireMock.NET stretch goal (Phase 7).
 
 See [ROADMAP.md](./ROADMAP.md) for the full phase-by-phase plan and progress.
 
