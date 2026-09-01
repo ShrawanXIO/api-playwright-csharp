@@ -33,4 +33,15 @@ public class AuthService : BaseService
         });
     }
 
+    public async Task<RefreshResponse> RefreshAsync(RefreshRequest request)
+    {
+        var response = await ApiClient.Context.PostAsync("/auth/refresh", new()
+        {
+            DataObject = request
+        });
+
+        var body = await response.TextAsync();
+        return JsonSerializer.Deserialize<RefreshResponse>(body, JsonOptions)!;
+    }
+
 }

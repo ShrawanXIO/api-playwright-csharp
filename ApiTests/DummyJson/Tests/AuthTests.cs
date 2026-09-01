@@ -63,4 +63,33 @@ public class AuthTests : BaseApiTest
         Assert.That(response.Status, Is.EqualTo(401));
     }
 
+    [Test]
+    public async Task Refresh_WithValidRefreshToken_ReturnsNewTokens()
+    {
+        var loginRequest = new LoginRequest
+        {
+            Username = Settings.DummyJsonUsername,
+            Password = Settings.DummyJsonPassword,
+            ExpiresInMins = 30
+        };
+        var loginResponse = await _authService.LoginAsync(loginRequest);
+
+        var refreshRequest = new RefreshRequest
+        {
+            RefreshToken = loginResponse.RefreshToken,
+            ExpiresInMins = 30
+        };
+        var refreshResponse = await _authService.RefreshAsync(refreshRequest);
+
+        var expiry = JwtHelper.GetExpiry(refreshResponse.AccessToken);
+        var expectedExpiry = DateTime.UtcNow.AddMinutes(30);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(refreshResponse.AccessToken, Is.Not.Empty);
+            Assert.That(refreshResponse.RefreshToken, Is.Not.Empty);
+            Assert.That(expiry, Is.EqualTo(expectedExpiry).Within(TimeSpan.FromMinutes(1)));
+        });
+    }
+
 }

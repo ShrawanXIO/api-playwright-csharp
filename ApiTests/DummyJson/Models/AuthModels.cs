@@ -17,3 +17,15 @@ public class LoginResponse
     public string AccessToken { get; set; } = string.Empty;
     public string RefreshToken { get; set; } = string.Empty;
 }
+
+public class RefreshRequest
+{
+    public string RefreshToken { get; set; } = string.Empty;
+    public int ExpiresInMins { get; set; }
+}
+
+public class RefreshResponse
+{
+    public string AccessToken { get; set; } = string.Empty;
+    public string RefreshToken { get; set; } = string.Empty;
+}
