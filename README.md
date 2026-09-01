@@ -1,6 +1,6 @@
 # api-playwright-csharp
 
-**Status:** In progress — Phases 1-3 complete (programmatic core, multi-API support, and full auth/token lifecycle testing, all verified against live APIs)
+**Status:** In progress — Phases 1-4 complete (programmatic core, multi-API support, full auth/token lifecycle testing, and a Reqnroll BDD layer, all verified against live APIs)
 
 An API test automation framework built with **Playwright**, **Reqnroll**, and **C#**, targeting the [DummyJSON](https://dummyjson.com) practice API — authentication and full product CRUD. Companion project to [`bdd-playwright-csharp`](https://github.com/ShrawanXIO/bdd-playwright-csharp) (SauceDemoBDD), which covers the UI side with the same stack. Built as a hands-on learning project to understand API testing architecture, request/response modeling, and dependency injection from first principles — no browser involved, no mocking, real HTTP calls against a real API.
 
@@ -10,7 +10,7 @@ An API test automation framework built with **Playwright**, **Reqnroll**, and **
 - **Playwright** — HTTP-only API testing via `APIRequestContext`; no browser is launched
 - **System.Text.Json** — request/response serialization, with case-insensitive property matching to bridge the API's camelCase and C#'s PascalCase conventions
 - **NUnit** — test runner
-- **Reqnroll** — BDD framework (Gherkin syntax); the service layer is already built to support this, wiring it in is Phase 4
+- **Reqnroll** — BDD framework (Gherkin syntax), wired in for DummyJSON's Authentication and Product CRUD features, calling into the same service layer used by the plain NUnit tests
 - **DummyJSON** — the public REST API used as the test target
 - **GitHub Actions** — CI pipeline; planned for Phase 6
 
@@ -31,7 +31,10 @@ api-playwright-csharp/
 │   ├── DummyJson/
 │   │   ├── Models/                 # AuthModels.cs, ProductModels.cs
 │   │   ├── Services/                # AuthService.cs, ProductsService.cs
-│   │   └── Tests/                   # SmokeTests.cs, AuthTests.cs, ProductsTests.cs
+│   │   ├── Tests/                   # SmokeTests.cs, AuthTests.cs, ProductsTests.cs (plain NUnit)
+│   │   ├── Features/                # Authentication.feature, Products.feature (Gherkin)
+│   │   ├── Steps/                   # AuthSteps.cs, ProductsSteps.cs (Reqnroll step definitions)
+│   │   └── Support/                 # Hooks.cs (BeforeScenario/AfterScenario, project-wide)
 │   ├── JsonPlaceholder/
 │   │   ├── Models/                 # PostModels.cs
 │   │   ├── Services/                # PostsService.cs
@@ -101,7 +104,7 @@ dotnet restore
 dotnet test
 ```
 
-Currently runs 12 tests across two independent APIs — DummyJSON (connectivity, full authentication lifecycle including JWT expiry verification, invalid-token rejection, and token refresh, plus full product CRUD) and JSONPlaceholder (no authentication) — all executing against live APIs, not mocks or stubs.
+Currently runs 19 tests — 12 plain NUnit tests plus 7 Reqnroll BDD scenarios (Authentication and Product CRUD, including a `Scenario Outline`) — across two independent APIs: DummyJSON (connectivity, full authentication lifecycle, full product CRUD in both NUnit and Gherkin form) and JSONPlaceholder (no authentication). All tests execute against live APIs, not mocks or stubs.
 
 ## What This Project Demonstrates
 
@@ -120,6 +123,9 @@ Currently runs 12 tests across two independent APIs — DummyJSON (connectivity,
 - **Configuration-driven settings** — base URLs and credentials loaded from `appsettings.json` at runtime, not hardcoded into test or service code
 - **Multi-API support, proven not just planned** — a second, unrelated API (JSONPlaceholder, no authentication at all) was added with zero changes to `Core/` or `BaseApiTest`, confirming the shared infrastructure genuinely is API-agnostic
 - **Vertical-slice project organization** — each API is self-contained (its own models, services, and tests together), rather than every API's code scattered across shared layer folders
+- **A working BDD layer on top of already-proven code** — Gherkin feature files and Reqnroll step definitions call into the exact same service layer the plain NUnit tests use, rather than a separate, parallel way of talking to the API
+- **Deliberate use of `Scenario Outline`** — applied specifically to the one operation with a naturally varying piece (updating a product's title), not mechanically forced onto every scenario
+- **Reqnroll's own dependency injection** — `Hooks`, `AuthSteps`, and `ProductsSteps` all receive the same shared `ApiClient` instance per scenario automatically, the same constructor-injection pattern used throughout the rest of the project
 - **A shared service base class** — `BaseService` removes duplicated client-reference and JSON-options code that was previously repeated in every service
 - **An optional, extensible auth hook** — `BaseApiTest.DefaultHeaders` lets a future API attach required headers (like a Bearer token) without affecting APIs that need none
 - **Repeatable scaffolding** — a PowerShell script generates a new API's folder and starter files with the correct namespaces and base-class inheritance already in place
@@ -140,10 +146,16 @@ Currently runs 12 tests across two independent APIs — DummyJSON (connectivity,
 | DummyJson | ProductsTests.cs | `DeleteProduct_ReturnsIsDeletedTrue` | DELETE returns the `isDeleted` flag and a deletion timestamp |
 | JsonPlaceholder | PostsTests.cs | `GetAllPosts_ReturnsPosts` | Post list endpoint (no authentication) returns data |
 | JsonPlaceholder | PostsTests.cs | `GetPostById_ReturnsCorrectPost` | Single-post GET returns the requested post |
+| DummyJson (BDD) | Authentication.feature | Successful login with valid credentials `@smoke` | Login via Reqnroll returns a valid access token |
+| DummyJson (BDD) | Products.feature | Retrieve all products `@smoke` | Product list scenario via Reqnroll |
+| DummyJson (BDD) | Products.feature | Retrieve a single product by id `@regression` | Single-product GET scenario via Reqnroll |
+| DummyJson (BDD) | Products.feature | Create a new product `@regression` | Create scenario via Reqnroll |
+| DummyJson (BDD) | Products.feature | Update a product's title `@regression` (`Scenario Outline`, 2 examples) | Data-driven update, run once per title in the Examples table |
+| DummyJson (BDD) | Products.feature | Delete a product `@regression` | Delete scenario via Reqnroll |
 
 ## Current Status & Roadmap
 
-Phases 1 through 3 are complete: the project is scaffolded, the full programmatic core is built and verified, the architecture has been hardened (`BaseApiTest`, `BaseService`, configuration-driven settings) and extended to a second independent API (JSONPlaceholder) as a proven vertical slice, and the full authentication lifecycle is now covered — JWT expiry verification, invalid-token rejection, and token refresh — all against live API responses, no mocks. Still ahead: the Reqnroll BDD layer on top of the existing services (Phase 4), parallel execution (Phase 5), CI/CD (Phase 6), and an optional WireMock.NET stretch goal (Phase 7).
+Phases 1 through 4 are complete: the project is scaffolded, the full programmatic core is built and verified, the architecture has been hardened (`BaseApiTest`, `BaseService`, configuration-driven settings) and extended to a second independent API (JSONPlaceholder) as a proven vertical slice, the full authentication lifecycle is covered (JWT expiry verification, invalid-token rejection, token refresh), and a Reqnroll BDD layer now sits on top of the existing DummyJSON services — all against live API responses, no mocks. Still ahead: parallel execution (Phase 5), CI/CD (Phase 6), and an optional WireMock.NET stretch goal (Phase 7).
 
 See [ROADMAP.md](./ROADMAP.md) for the full phase-by-phase plan and progress.
 
