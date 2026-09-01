@@ -37,4 +37,22 @@ public class AuthTests : BaseApiTest
         });
     }
 
+    [Test]
+    public async Task Login_WithExpiresInMins30_TokenExpiresInApproximately30Minutes()
+    {
+        var request = new LoginRequest
+        {
+            Username = Settings.DummyJsonUsername,
+            Password = Settings.DummyJsonPassword,
+            ExpiresInMins = 30
+        };
+
+        var response = await _authService.LoginAsync(request);
+
+        var expiry = JwtHelper.GetExpiry(response.AccessToken);
+        var expectedExpiry = DateTime.UtcNow.AddMinutes(30);
+
+        Assert.That(expiry, Is.EqualTo(expectedExpiry).Within(TimeSpan.FromMinutes(1)));
+    }
+
 }
