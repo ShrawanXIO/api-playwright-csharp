@@ -1,6 +1,7 @@
 using System.Text.Json;
 using ApiTests.Core;
 using ApiTests.DummyJson.Models;
+using Microsoft.Playwright;
 
 namespace ApiTests.DummyJson.Services;
 
@@ -19,6 +20,17 @@ public class AuthService : BaseService
 
         var body = await response.TextAsync();
         return JsonSerializer.Deserialize<LoginResponse>(body, JsonOptions)!;
+    }
+
+    public async Task<IAPIResponse> GetCurrentUserAsync(string accessToken)
+    {
+        return await ApiClient.Context.GetAsync("/auth/me", new()
+        {
+            Headers = new Dictionary<string, string>
+        {
+            { "Authorization", $"Bearer {accessToken}" }
+        }
+        });
     }
 
 }

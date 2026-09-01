@@ -55,4 +55,12 @@ public class AuthTests : BaseApiTest
         Assert.That(expiry, Is.EqualTo(expectedExpiry).Within(TimeSpan.FromMinutes(1)));
     }
 
+    [Test]
+    public async Task GetCurrentUser_WithInvalidToken_Returns401()
+    {
+        var response = await _authService.GetCurrentUserAsync("this.is.not.a.valid.token");
+
+        Assert.That(response.Status, Is.EqualTo(401));
+    }
+
 }
