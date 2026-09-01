@@ -1,6 +1,6 @@
 # api-playwright-csharp
 
-**Status:** In progress — Phase 2 complete (programmatic core built and verified against live DummyJSON responses)
+**Status:** In progress — Phases 1-3 complete (programmatic core, multi-API support, and full auth/token lifecycle testing, all verified against live APIs)
 
 An API test automation framework built with **Playwright**, **Reqnroll**, and **C#**, targeting the [DummyJSON](https://dummyjson.com) practice API — authentication and full product CRUD. Companion project to [`bdd-playwright-csharp`](https://github.com/ShrawanXIO/bdd-playwright-csharp) (SauceDemoBDD), which covers the UI side with the same stack. Built as a hands-on learning project to understand API testing architecture, request/response modeling, and dependency injection from first principles — no browser involved, no mocking, real HTTP calls against a real API.
 
@@ -26,7 +26,8 @@ api-playwright-csharp/
 │   │   ├── ApiSettings.cs          # Typed shape of appsettings.json
 │   │   ├── ConfigLoader.cs         # Reads and deserializes appsettings.json into ApiSettings
 │   │   ├── BaseApiTest.cs          # Shared connection setup/teardown — every API's test classes inherit from this
-│   │   └── BaseService.cs          # Shared ApiClient reference and JSON options — every service inherits from this
+│   │   ├── BaseService.cs          # Shared ApiClient reference and JSON options — every service inherits from this
+│   │   └── JwtHelper.cs            # Decodes a JWT's payload and extracts its expiry — used by any API issuing JWTs
 │   ├── DummyJson/
 │   │   ├── Models/                 # AuthModels.cs, ProductModels.cs
 │   │   ├── Services/                # AuthService.cs, ProductsService.cs
@@ -71,6 +72,21 @@ Services follow the identical idea: every service (`AuthService`, `ProductsServi
 - Git
 - No browser install required — unlike a UI framework, `APIRequestContext` sends HTTP requests directly, so there's nothing for Playwright to launch or download
 
+## Dependencies
+
+| Package | Version | Purpose |
+| --- | --- | --- |
+| Microsoft.Playwright | 1.62.0 | The HTTP client used throughout — `APIRequestContext` |
+| NUnit | 4.3.2 | The test framework — `[Test]`, `[SetUp]`, `[TearDown]`, assertions |
+| NUnit3TestAdapter | 5.0.0 | Lets `dotnet test` and IDE test explorers discover and run NUnit tests |
+| Microsoft.NET.Test.Sdk | 17.14.0 | Core SDK required to run any .NET test project at all |
+| NUnit.Analyzers | 4.7.0 | Compile-time checks that catch common NUnit mistakes before running |
+| coverlet.collector | 6.0.4 | Code coverage data collection during test runs (from the original project template; not yet actively used) |
+
+All request/response JSON serialization uses `System.Text.Json`, which ships as part of .NET itself — no separate package required.
+
+**How installation actually works, for anyone coming from a `requirements.txt` / `pip install` background:** `ApiTests.csproj` (specifically its `<PackageReference>` entries) is the equivalent of `requirements.txt` — the committed list of what's needed. `dotnet restore` is the equivalent of `pip install -r requirements.txt` — the step that actually downloads them. The one real difference: `dotnet build` and `dotnet test` both run restore automatically before doing anything else, so it's rarely something you run as a separate, deliberate step — running `dotnet restore` explicitly below is optional, shown for completeness.
+
 ## Setup
 
 ```bash
@@ -85,7 +101,7 @@ dotnet restore
 dotnet test
 ```
 
-Currently runs 9 tests across two independent APIs — DummyJSON (connectivity, authentication, full product CRUD) and JSONPlaceholder (no authentication) — all executing against live APIs, not mocks or stubs.
+Currently runs 12 tests across two independent APIs — DummyJSON (connectivity, full authentication lifecycle including JWT expiry verification, invalid-token rejection, and token refresh, plus full product CRUD) and JSONPlaceholder (no authentication) — all executing against live APIs, not mocks or stubs.
 
 ## What This Project Demonstrates
 
@@ -94,6 +110,9 @@ Currently runs 9 tests across two independent APIs — DummyJSON (connectivity, 
 - **Constructor-based dependency injection** — services receive an already-initialized `ApiClient` rather than constructing their own, keeping each service focused on its own endpoint logic
 - **Typed request/response models (POCOs)** instead of raw dictionaries or JSON strings, with case-insensitive deserialization bridging the API's camelCase and C#'s PascalCase conventions
 - **Real authentication flow** — genuine JWT access and refresh tokens captured from DummyJSON's `/auth/login`, not mocked
+- **JWT decoding and expiry verification** — `JwtHelper` decodes a token's payload (handling Base64URL's differences from standard Base64) and confirms the requested `expiresInMins` is honored, with a tolerance window to avoid flaky time-based assertions
+- **Negative-path auth testing** — an invalid token against `/auth/me` is confirmed to return a real 401, not just assumed
+- **Token refresh, verified correctly** — the refreshed token's own expiry is checked, not a string comparison against the original, since JWTs are deterministic and can be byte-identical when generated within the same second
 - **Full CRUD coverage** against a real REST API, including correctly modeling the API's non-obvious response shapes — the product list endpoint returns a wrapper object with pagination metadata rather than a bare array, and the delete endpoint returns a different shape than a normal read
 - **Test isolation** — every test creates and disposes its own `ApiClient`, so no test depends on or affects another's state
 - **Async-safe initialization** — an `InitializeAsync`/`DisposeAsync` pattern used throughout, since C# constructors can't be `async`
@@ -111,6 +130,9 @@ Currently runs 9 tests across two independent APIs — DummyJSON (connectivity, 
 | --- | --- | --- | --- |
 | DummyJson | SmokeTests.cs | `GetProducts_ReturnsOk` | Basic connectivity — a GET call to DummyJSON returns a 200 |
 | DummyJson | AuthTests.cs | `Login_WithValidCredentials_ReturnsAccessToken` | Login returns a valid JWT access token and refresh token |
+| DummyJson | AuthTests.cs | `Login_WithExpiresInMins30_TokenExpiresInApproximately30Minutes` | The token's decoded `exp` claim reflects the requested 30-minute expiry |
+| DummyJson | AuthTests.cs | `GetCurrentUser_WithInvalidToken_Returns401` | `/auth/me` correctly rejects a malformed token with a 401 |
+| DummyJson | AuthTests.cs | `Refresh_WithValidRefreshToken_ReturnsNewTokens` | `/auth/refresh` returns new tokens with a correctly-verified new expiry |
 | DummyJson | ProductsTests.cs | `GetAllProducts_ReturnsProducts` | Product list endpoint returns data with correct pagination metadata |
 | DummyJson | ProductsTests.cs | `GetProductById_ReturnsCorrectProduct` | Single-product GET returns the requested product |
 | DummyJson | ProductsTests.cs | `CreateProduct_ReturnsNewProductWithId` | POST to `/products/add` returns a new product with a generated ID |
@@ -121,7 +143,7 @@ Currently runs 9 tests across two independent APIs — DummyJSON (connectivity, 
 
 ## Current Status & Roadmap
 
-Phases 1 and 2 are complete: the project is scaffolded, and the full programmatic core — `ApiClient`, both services, and every model — is built and verified against live API responses. Since then, the framework has also been hardened with a shared `BaseApiTest` base class and a configuration-driven settings layer, and extended to a second, independent API (JSONPlaceholder) organized as a vertical slice alongside DummyJSON — all covered in the Architecture and Project Structure sections above. Still ahead: token-expiry testing (Phase 3), the Reqnroll BDD layer on top of the existing services (Phase 4), parallel execution (Phase 5), CI/CD (Phase 6), and an optional WireMock.NET stretch goal (Phase 7).
+Phases 1 through 3 are complete: the project is scaffolded, the full programmatic core is built and verified, the architecture has been hardened (`BaseApiTest`, `BaseService`, configuration-driven settings) and extended to a second independent API (JSONPlaceholder) as a proven vertical slice, and the full authentication lifecycle is now covered — JWT expiry verification, invalid-token rejection, and token refresh — all against live API responses, no mocks. Still ahead: the Reqnroll BDD layer on top of the existing services (Phase 4), parallel execution (Phase 5), CI/CD (Phase 6), and an optional WireMock.NET stretch goal (Phase 7).
 
 See [ROADMAP.md](./ROADMAP.md) for the full phase-by-phase plan and progress.
 

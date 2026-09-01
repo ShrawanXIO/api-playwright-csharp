@@ -12,7 +12,7 @@ A Playwright + Reqnroll + NUnit BDD framework in C# for **API** test automation,
 | HTTP Client | Playwright `APIRequestContext` |
 | BDD | Reqnroll |
 | Test Runner | NUnit |
-| Target API | DummyJSON (`https://dummyjson.com`) |
+| Target APIs | DummyJSON (`https://dummyjson.com`), JSONPlaceholder (`https://jsonplaceholder.typicode.com`) |
 | CI/CD | GitHub Actions |
 | Mocking (stretch) | WireMock.NET |
 
@@ -36,9 +36,9 @@ A Playwright + Reqnroll + NUnit BDD framework in C# for **API** test automation,
 
 ### Phase 3 — Auth & Token Expiry
 
-- [ ] Login with `expiresInMins=30`, decode the JWT, assert the `exp` claim is ~30 minutes out
-- [ ] Negative case: expired/invalid token → 401 handling
-- [ ] Refresh token flow
+- [x] Login with `expiresInMins=30`, decode the JWT (`JwtHelper`), assert the `exp` claim is ~30 minutes out
+- [x] Negative case: invalid token against `/auth/me` → 401 handling
+- [x] Refresh token flow — verified via the refreshed token's own expiry, not string comparison against the original (see note below)
 
 ### Phase 4 — BDD Layer (Reqnroll)
 
@@ -70,16 +70,16 @@ A running reference of the underlying concepts this framework is built to demons
 
 1. **HTTP fundamentals** — Methods and idempotency, status code categories, headers (`Content-Type`, `Authorization`). The foundation everything else in this project sits on.
 2. **Playwright's `APIRequestContext` model** — Context creation (`NewContextAsync`), `BaseURL`, default headers, and the response shape (`IAPIResponse`). Shares cookies and storage state the same way a browser context does, which is why it pairs naturally with a Playwright-based UI framework. *(Phase 1)*
-3. **Authentication & token lifecycle** — Login and token capture via `AuthService`; expiry handling still ahead. *(Phase 2 done, Phase 3 in progress)*
+3. **Authentication & token lifecycle** — Full lifecycle now covered: login and token capture, JWT expiry decoding and verification (`JwtHelper`, handling Base64URL's `-`/`_`/no-padding differences from standard Base64), rejection of invalid tokens (401 from `/auth/me`), and refresh producing a token with a correctly-verified new expiry. One real lesson from building this: an early version of the refresh test asserted the new access token was a different *string* than the original — it failed intermittently, not from a bug, but because DummyJSON's JWTs are deterministic (same payload always produces the same signature) and a JWT's `iat` has only second-level precision, so a login and refresh landing in the same second produce byte-identical tokens. The fix was asserting what refresh actually guarantees — a correctly-expiring token — rather than an incidental detail. *(Phase 2 and 3 done)*
 4. **Framework architecture — separation of concerns** — Thin HTTP client wrapper (`ApiClient`) → service/endpoint classes (`AuthService`, `ProductsService`) → test layer, so each concern has exactly one place to change. Extended with `BaseApiTest`, a shared abstract base class (Template Method pattern) that owns connection setup/teardown for every test class, and a configuration layer (`appsettings.json` + `ConfigLoader`) so base URLs and credentials are never hardcoded. `BaseService` applies the same Template Method idea one layer over, removing duplicated setup code across every service. The project is organized as **vertical slices** — each API (`DummyJson/`, `JsonPlaceholder/`) is self-contained with its own models, services, and tests, while only truly shared infrastructure lives in `Core/`, and a scaffolding script (`scaffold-api.ps1`) generates that structure for any new API automatically. *(Phase 2 done, Phase 4 pending)*
 5. **BDD & Gherkin — when it earns its place** — Scenario Outlines for data-driven coverage; step definitions call into services rather than raw HTTP, so BDD adds clarity instead of ceremony. *(Phase 4)*
 6. **Reqnroll mechanics** — Attribute-based step binding, `[BeforeScenario]`/`[AfterScenario]` hooks, and dependency injection sharing objects (like `ApiClient`) across step classes within a scenario. *(Phase 4)*
-7. **Test execution model — isolation & parallelism** — No shared mutable state, correct `SetUp`/`TearDown` scoping. Currently proven with 7 independent tests (`SmokeTests`, `AuthTests`, `ProductsTests`) all passing; parallel execution itself lands in Phase 5. *(Phase 2 groundwork done, Phase 5 pending)*
+7. **Test execution model — isolation & parallelism** — No shared mutable state, correct `SetUp`/`TearDown` scoping. Currently proven with 12 independent tests across two APIs (`SmokeTests`, `AuthTests`, `ProductsTests`, `PostsTests`) all passing; parallel execution itself lands in Phase 5. *(Phase 2 groundwork done, Phase 5 pending)*
 
 ## Non-Goals (for this project)
 
 - No RestSharp — Playwright `APIRequestContext` only, to keep one HTTP client shared across the UI and API projects
-- No production/company APIs — public practice API only (DummyJSON)
+- No production/company APIs — public practice APIs only (DummyJSON, JSONPlaceholder)
 
 ## Companion Project
 
