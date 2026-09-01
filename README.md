@@ -25,7 +25,8 @@ api-playwright-csharp/
 │   │   ├── ApiClient.cs            # Wraps Playwright's APIRequestContext — the only file that touches Playwright directly
 │   │   ├── ApiSettings.cs          # Typed shape of appsettings.json
 │   │   ├── ConfigLoader.cs         # Reads and deserializes appsettings.json into ApiSettings
-│   │   └── BaseApiTest.cs          # Shared connection setup/teardown — every API's test classes inherit from this
+│   │   ├── BaseApiTest.cs          # Shared connection setup/teardown — every API's test classes inherit from this
+│   │   └── BaseService.cs          # Shared ApiClient reference and JSON options — every service inherits from this
 │   ├── DummyJson/
 │   │   ├── Models/                 # AuthModels.cs, ProductModels.cs
 │   │   ├── Services/                # AuthService.cs, ProductsService.cs
@@ -35,13 +36,14 @@ api-playwright-csharp/
 │   │   ├── Services/                # PostsService.cs
 │   │   └── Tests/                   # PostsTests.cs
 │   ├── appsettings.json            # Base URLs and credentials for every API — no hardcoded values anywhere in test code
+│   ├── scaffold-api.ps1            # Generates the Models/Services/Tests skeleton for a new API
 │   └── ApiTests.csproj
 ├── ApiPlaywrightCSharp.sln         # Solution file
 ├── ROADMAP.md                      # Phase-by-phase build plan and current progress
 └── README.md
 ```
 
-Adding a third API means adding a third self-contained folder alongside `DummyJson/` and `JsonPlaceholder/` — nothing in `Core/` needs to change to support it.
+Adding a third API means running `scaffold-api.ps1` with the new API's name, adding its base URL to `appsettings.json`/`ApiSettings.cs`, and filling in the generated model/service/test skeletons — nothing in `Core/` needs to change to support it.
 
 ## Architecture
 
@@ -60,6 +62,8 @@ This is also why every test is independent: each one creates and disposes its ow
 Every test class also inherits from **`BaseApiTest`**, an abstract base class that owns the one thing every test class needs regardless of which API it targets: creating and disposing the `ApiClient` connection. Each derived class supplies only its own `BaseUrl` — a compulsory, compiler-enforced override — and whatever service objects it specifically needs. This is the Template Method design pattern: the base class defines the fixed skeleton, derived classes fill in the one piece that varies.
 
 Base URLs and credentials are no longer hardcoded anywhere either — they're loaded once from `appsettings.json` via `ConfigLoader`, and shared across every test class through a single field on `BaseApiTest`.
+
+Services follow the identical idea: every service (`AuthService`, `ProductsService`, `PostsService`) inherits from **`BaseService`**, which holds the shared `ApiClient` reference and JSON deserialization options that were previously duplicated, word-for-word, in every service file. `BaseApiTest` also exposes an optional `DefaultHeaders` hook — a `virtual` property, not a required one — so a future API needing an `Authorization` header on every request can supply one, while APIs that need no auth at all (both current ones) are unaffected.
 
 ## Prerequisites
 
@@ -97,6 +101,9 @@ Currently runs 9 tests across two independent APIs — DummyJSON (connectivity, 
 - **Configuration-driven settings** — base URLs and credentials loaded from `appsettings.json` at runtime, not hardcoded into test or service code
 - **Multi-API support, proven not just planned** — a second, unrelated API (JSONPlaceholder, no authentication at all) was added with zero changes to `Core/` or `BaseApiTest`, confirming the shared infrastructure genuinely is API-agnostic
 - **Vertical-slice project organization** — each API is self-contained (its own models, services, and tests together), rather than every API's code scattered across shared layer folders
+- **A shared service base class** — `BaseService` removes duplicated client-reference and JSON-options code that was previously repeated in every service
+- **An optional, extensible auth hook** — `BaseApiTest.DefaultHeaders` lets a future API attach required headers (like a Bearer token) without affecting APIs that need none
+- **Repeatable scaffolding** — a PowerShell script generates a new API's folder and starter files with the correct namespaces and base-class inheritance already in place
 
 ## Tests Covered
 
